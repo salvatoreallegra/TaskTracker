@@ -47,7 +47,7 @@ public class TasksController : ControllerBase
     {
         // FindAsync uses the primary key and checks the change tracker first.
         var item = await _db.Tasks.FindAsync(id);
-        if (item is null) return NotFound(); // 404
+        if(item is null) return NotFound(new { message = $"Task {id} not found" }); // 404
 
         return Ok(item); // 200 with JSON body
     }
