@@ -1,4 +1,6 @@
-﻿namespace TaskTracker.Api.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace TaskTracker.Api.Models
 {
     /// <summary>
     /// Represents a single task in the Task Tracker system.
@@ -9,9 +11,12 @@
         public int Id { get; set; }
 
         /// <summary>Title of the task (required, max 200 chars).</summary>
+        [Required]
+        [MaxLength(200)]
         public string Title { get; set; } = "";
 
         /// <summary>Optional task description (max 2000 chars).</summary>
+        [MaxLength(2000)]
         public string? Description { get; set; }
 
         /// <summary>Whether the task is complete.</summary>
