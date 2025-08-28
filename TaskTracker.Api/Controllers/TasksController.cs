@@ -23,22 +23,55 @@ public class TasksController : ControllerBase
     /// </summary>
     public TasksController(AppDbContext db) => _db = db;
 
-    /// <summary>Return all tasks (newest first).</summary>
-    /// <remarks>
-    /// GET /api/tasks
-    /// Uses LINQ to order by CreatedUtc DESC and materialize the list.
-    /// </remarks>
+    /// <summary>
+    /// Get a page of tasks (newest first) with optional filters.
+    /// </summary>
+    /// <param name="page">1-based page index (default 1).</param>
+    /// <param name="pageSize">Items per page (default 10, max 100).</param>
+    /// <param name="isDone">Optional: filter completed vs not.</param>
+    /// <param name="search">Optional: case-insensitive search in title/description.</param>
+    /// <param name="ct">Cancellation token to cancel DB calls if client disconnects.</param>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskItem>>> GetAll()
+    public async Task<ActionResult<IEnumerable<TaskItem>>> GetAll(
+        int page = 1,
+        int pageSize = 10,
+        bool? isDone = null,
+        string? search = null,
+        CancellationToken ct = default)
     {
-        // Build the query (IQueryable) and execute with ToListAsync()
-        var items = await _db.Tasks
-            .OrderByDescending(t => t.CreatedUtc)
-            .ToListAsync();
+        // Validate & normalize inputs
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 1;
+        if (pageSize > 100) pageSize = 100;
 
-        // ActionResult<T>: returning Ok(items) yields HTTP 200 + JSON body
+        // Build query incrementally (IQueryable => deferred execution)
+        var query = _db.Tasks.AsQueryable();
+
+        if (isDone.HasValue)
+            query = query.Where(t => t.IsDone == isDone.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(t =>
+                t.Title.ToLower().Contains(term) ||
+                (t.Description != null && t.Description.ToLower().Contains(term)));
+        }
+
+        // Sort newest first
+        query = query.OrderByDescending(t => t.CreatedUtc);
+
+        // Apply paging
+        var skip = (page - 1) * pageSize;
+
+        var items = await query
+            .Skip(skip)
+            .Take(pageSize)
+            .ToListAsync(ct); // pass CancellationToken into DB call
+
         return Ok(items);
     }
+
 
     /// <summary>Return a single task by ID, or 404 if not found.</summary>
     /// <remarks>GET /api/tasks/5</remarks>
