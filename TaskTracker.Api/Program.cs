@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TaskTracker.Api.Data;
+using TaskTracker.Api.Middleware;
+using TaskTracker.Api.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 var app = builder.Build();
 
 // ===== DEV-ONLY DB SEEDING =====
@@ -41,6 +44,8 @@ if (app.Environment.IsDevelopment())
 
 // CORS must be before MapControllers
 app.UseCors(DevClientCors);
+
+app.UseGlobalExceptionHandling();
 
 app.UseAuthorization();
 
