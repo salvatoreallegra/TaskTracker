@@ -6,8 +6,10 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using TaskTracker.Api.Data;
 using TaskTracker.Api.Models;
+using TaskTracker.Api.Options;
 
 namespace TaskTracker.Api.Controllers;
 
@@ -16,12 +18,19 @@ namespace TaskTracker.Api.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<TasksController> _logger;
+    private readonly AppOptions _appOptions;
 
     /// <summary>
     /// The DbContext is injected by ASP.NET Core's DI container.
     /// This gives us a configured AppDbContext per request.
     /// </summary>
-    public TasksController(AppDbContext db) => _db = db;
+    public TasksController(AppDbContext db, ILogger<TasksController> logger, IOptions<AppOptions> appOptions)
+    {
+        _db = db;
+        _logger = logger;
+        _appOptions = appOptions.Value;
+    }
 
     /// <summary>
     /// Get a page of tasks (newest first) with optional filters.
@@ -31,20 +40,26 @@ public class TasksController : ControllerBase
     /// <param name="isDone">Optional: filter completed vs not.</param>
     /// <param name="search">Optional: case-insensitive search in title/description.</param>
     /// <param name="ct">Cancellation token to cancel DB calls if client disconnects.</param>
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TaskItem>>> GetAll(
         int page = 1,
-        int pageSize = 10,
+        int pageSize = 0,
         bool? isDone = null,
         string? search = null,
         CancellationToken ct = default)
     {
-        // Validate & normalize inputs
+        // Use configured defaults if client didn't specify pageSize
+        if (pageSize <= 0) pageSize = _appOptions.DefaultPageSize;
+
+        // Enforce bounds
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 1;
-        if (pageSize > 100) pageSize = 100;
+        if (pageSize > _appOptions.MaxPageSize) pageSize = _appOptions.MaxPageSize;
 
-        // Build query incrementally (IQueryable => deferred execution)
+        _logger.LogInformation("GET /tasks page={Page} pageSize={PageSize} isDone={IsDone} search={Search}",
+            page, pageSize, isDone, search);
+
         var query = _db.Tasks.AsQueryable();
 
         if (isDone.HasValue)
@@ -58,19 +73,18 @@ public class TasksController : ControllerBase
                 (t.Description != null && t.Description.ToLower().Contains(term)));
         }
 
-        // Sort newest first
         query = query.OrderByDescending(t => t.CreatedUtc);
 
-        // Apply paging
         var skip = (page - 1) * pageSize;
+        var items = await query.Skip(skip).Take(pageSize).ToListAsync(ct);
 
-        var items = await query
-            .Skip(skip)
-            .Take(pageSize)
-            .ToListAsync(ct); // pass CancellationToken into DB call
-
+        _logger.LogDebug("Returning {Count} items", items.Count);
         return Ok(items);
     }
+
+    // Add a throw route just to see the global handler (dev only)
+    [HttpGet("boom")]
+    public IActionResult Boom() => throw new InvalidOperationException("Boom for demo");
 
 
     /// <summary>Return a single task by ID, or 404 if not found.</summary>
