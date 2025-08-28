@@ -1,30 +1,22 @@
-﻿// -------------------------------------------------------
-// TasksController.cs
-// A simple REST controller using EF Core directly.
-// (We'll introduce DTOs, services, and layers later.)
-// -------------------------------------------------------
-
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TaskTracker.Api.Data;
+using TaskTracker.Api.Dtos;
+using TaskTracker.Api.Mapping;
 using TaskTracker.Api.Models;
 using TaskTracker.Api.Options;
 
 namespace TaskTracker.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")] // Base URL: /api/tasks
+[Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ILogger<TasksController> _logger;
     private readonly AppOptions _appOptions;
 
-    /// <summary>
-    /// The DbContext is injected by ASP.NET Core's DI container.
-    /// This gives us a configured AppDbContext per request.
-    /// </summary>
     public TasksController(AppDbContext db, ILogger<TasksController> logger, IOptions<AppOptions> appOptions)
     {
         _db = db;
@@ -32,27 +24,16 @@ public class TasksController : ControllerBase
         _appOptions = appOptions.Value;
     }
 
-    /// <summary>
-    /// Get a page of tasks (newest first) with optional filters.
-    /// </summary>
-    /// <param name="page">1-based page index (default 1).</param>
-    /// <param name="pageSize">Items per page (default 10, max 100).</param>
-    /// <param name="isDone">Optional: filter completed vs not.</param>
-    /// <param name="search">Optional: case-insensitive search in title/description.</param>
-    /// <param name="ct">Cancellation token to cancel DB calls if client disconnects.</param>
-
+    /// <summary>Get a page of tasks (newest first) with optional filters.</summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TaskItem>>> GetAll(
+    public async Task<ActionResult<IEnumerable<TaskReadDto>>> GetAll(
         int page = 1,
         int pageSize = 0,
         bool? isDone = null,
         string? search = null,
         CancellationToken ct = default)
     {
-        // Use configured defaults if client didn't specify pageSize
         if (pageSize <= 0) pageSize = _appOptions.DefaultPageSize;
-
-        // Enforce bounds
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 1;
         if (pageSize > _appOptions.MaxPageSize) pageSize = _appOptions.MaxPageSize;
@@ -76,74 +57,63 @@ public class TasksController : ControllerBase
         query = query.OrderByDescending(t => t.CreatedUtc);
 
         var skip = (page - 1) * pageSize;
-        var items = await query.Skip(skip).Take(pageSize).ToListAsync(ct);
 
-        _logger.LogDebug("Returning {Count} items", items.Count);
-        return Ok(items);
+        // Project to DTOs in-memory (safe). For big queries, use .Select(...)
+        var items = await query.Skip(skip).Take(pageSize).ToListAsync(ct);
+        var dtos = items.Select(e => e.ToReadDto()).ToList();
+
+        _logger.LogDebug("Returning {Count} items", dtos.Count);
+        return Ok(dtos);
     }
 
-    // Add a throw route just to see the global handler (dev only)
-    [HttpGet("boom")]
-    public IActionResult Boom() => throw new InvalidOperationException("Boom for demo");
-
-
     /// <summary>Return a single task by ID, or 404 if not found.</summary>
-    /// <remarks>GET /api/tasks/5</remarks>
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<TaskItem>> Get(int id)
+    public async Task<ActionResult<TaskReadDto>> Get(int id, CancellationToken ct = default)
     {
-        // FindAsync uses the primary key and checks the change tracker first.
-        var item = await _db.Tasks.FindAsync(id);
-        if(item is null) return NotFound(new { message = $"Task {id} not found" }); // 404
+        var item = await _db.Tasks.FindAsync([id], ct);
+        if (item is null)
+            return NotFound(new { message = $"Task {id} not found" });
 
-        return Ok(item); // 200 with JSON body
+        return Ok(item.ToReadDto());
     }
 
     /// <summary>Create a new task from JSON body.</summary>
-    /// <remarks>
-    /// POST /api/tasks
-    /// Body example:
-    /// { "title": "Finish Day 2", "description": "EF + CRUD", "isDone": false }
-    /// </remarks>
     [HttpPost]
-    public async Task<ActionResult<TaskItem>> Create(TaskItem body)
+    public async Task<ActionResult<TaskReadDto>> Create([FromBody] TaskCreateDto body, CancellationToken ct = default)
     {
-        // Note: In this early stage we accept the entity directly.
-        // Later we'll validate and use DTOs.
-        _db.Tasks.Add(body);           // Stage INSERT
-        await _db.SaveChangesAsync();  // Execute INSERT
+        // [ApiController] + DataAnnotations on DTO → auto 400 on invalid model
+        var entity = body.ToEntity();
 
-        // Return 201 Created with a Location header to GET the new resource.
-        return CreatedAtAction(nameof(Get), new { id = body.Id }, body);
+        _db.Tasks.Add(entity);
+        await _db.SaveChangesAsync(ct);
+
+        var readDto = entity.ToReadDto();
+        return CreatedAtAction(nameof(Get), new { id = readDto.Id }, readDto);
     }
 
     /// <summary>Update an existing task by ID.</summary>
-    /// <remarks>
-    /// PUT /api/tasks/5
-    /// Body must include matching "id": 5
-    /// </remarks>
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, TaskItem body)
+    public async Task<IActionResult> Update(int id, [FromBody] TaskUpdateDto body, CancellationToken ct = default)
     {
-        if (id != body.Id) return BadRequest(); // 400 if route id != body id
+        if (id != body.Id) return BadRequest(new { message = "Route id must match body id." });
 
-        // Attach the incoming entity and mark as Modified so EF generates UPDATE
-        _db.Entry(body).State = EntityState.Modified;
+        var entity = await _db.Tasks.FindAsync([id], ct);
+        if (entity is null) return NotFound(new { message = $"Task {id} not found" });
 
-        await _db.SaveChangesAsync(); // Execute UPDATE
-        return NoContent();           // 204 (success, no body)
+        entity.ApplyUpdate(body);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
     }
 
     /// <summary>Delete a task by ID.</summary>
-    /// <remarks>DELETE /api/tasks/5</remarks>
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
-        var item = await _db.Tasks.FindAsync(id);
-        if (item is null) return NotFound(); // 404
+        var entity = await _db.Tasks.FindAsync([id], ct);
+        if (entity is null) return NotFound(new { message = $"Task {id} not found" });
 
-        _db.Tasks.Remove(item);              // Stage DELETE
-        await _db.SaveChangesAsync();        // Execute DELETE
-        return NoContent();                  // 204
+        _db.Tasks.Remove(entity);
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
     }
 }
