@@ -4,6 +4,7 @@ using TaskTracker.Api.Data;
 using TaskTracker.Api.Middleware;
 using TaskTracker.Api.Options;
 using TaskTracker.Api.Services;
+using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<TaskService>();
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
 // CORS: define a named policy for your dev client origin
 const string DevClientCors = "DevClientCors";
