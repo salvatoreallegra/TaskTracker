@@ -1,13 +1,18 @@
 using Microsoft.EntityFrameworkCore;
+using TaskTracker.Api.Abstractions;
 using TaskTracker.Api.Data;
 using TaskTracker.Api.Middleware;
 using TaskTracker.Api.Options;
+using TaskTracker.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<ITaskRepository, TaskRepository>();
+builder.Services.AddScoped<TaskService>();
 
 // CORS: define a named policy for your dev client origin
 const string DevClientCors = "DevClientCors";
