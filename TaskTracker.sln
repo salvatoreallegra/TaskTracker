@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskTracker.Tests", "TaskTracker.Tests\TaskTracker.Tests.csproj", "{D1A1FF0E-88D2-4C19-9107-004372F9EB02}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{3887FDEE-4464-4CEA-B78B-4D0285676E77}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3887FDEE-4464-4CEA-B78B-4D0285676E77}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3887FDEE-4464-4CEA-B78B-4D0285676E77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1A1FF0E-88D2-4C19-9107-004372F9EB02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1A1FF0E-88D2-4C19-9107-004372F9EB02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1A1FF0E-88D2-4C19-9107-004372F9EB02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1A1FF0E-88D2-4C19-9107-004372F9EB02}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
