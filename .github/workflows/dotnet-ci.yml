@@ -1,0 +1,45 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout your repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) Setup .NET 9 (SDK)
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # 3) Restore NuGet packages
+      - name: Restore
+        run: dotnet restore
+
+      # 4) Build (Release)
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # 5) Run tests (unit + integration)
+      # Your integration tests use WebApplicationFactory + InMemory EF, so no secrets needed.
+      - name: Test
+        run: dotnet test --configuration Release --no-build --collect "XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
+
+      # 6) Upload test results (nice to have)
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dotnet-test-results
+          path: |
+            **/TestResults/*.trx
+            **/TestResults/**/coverage.cobertura.xml
