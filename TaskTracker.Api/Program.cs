@@ -35,12 +35,12 @@ builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 var app = builder.Build();
 
 // ===== DEV-ONLY DB SEEDING =====
-if (app.Environment.IsDevelopment())
+/*if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DbSeeder.SeedAsync(db); // seed dev data
-}
+}*/
 // ===============================
 
 if (app.Environment.IsDevelopment())

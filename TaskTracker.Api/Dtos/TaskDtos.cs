@@ -30,6 +30,9 @@ public sealed class TaskCreateDto
     public string? Description { get; init; }
 
     public DateTime? DueUtc { get; init; }
+
+    [Required]
+    public int ProjectId { get; init; }
 }
 
 /// <summary>Shape clients PUT to update an existing task.</summary>

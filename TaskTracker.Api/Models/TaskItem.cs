@@ -27,5 +27,12 @@ namespace TaskTracker.Api.Models
 
         /// <summary>Optional due date (UTC).</summary>
         public DateTime? DueUtc { get; set; }
+
+        /// <summary>
+        /// Add FK + nav back to Project
+        /// </summary>
+        public int ProjectId { get; set; }    // foreign key
+        public Project? Project { get; set; } // navigation property
+
     }
 }
