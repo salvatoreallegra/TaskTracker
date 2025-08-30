@@ -24,5 +24,9 @@ public sealed class TaskProfile : Profile
         // Update DTO -> Entity (ApplyUpdate logic becomes part of AutoMapper)
         CreateMap<TaskUpdateDto, TaskItem>()
             .ForMember(dest => dest.CreatedUtc, opt => opt.Ignore()); // never update CreatedUtc
+
+        CreateMap<Project, ProjectReadDto>();
+        CreateMap<ProjectCreateDto, Project>();
+
     }
 }
