@@ -28,8 +28,16 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    // Register dummy provider in tests (we'll override it in CustomWebApplicationFactory anyway)
+}
+else
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+}
+
 
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 var app = builder.Build();
@@ -59,3 +67,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 await app.RunAsync();
+public partial class Program { } // Needed for WebApplicationFactory<T>
+
