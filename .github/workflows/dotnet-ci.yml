@@ -1,45 +1,37 @@
-name: .NET CI
+name: Build & Deploy TaskTracker API
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1) Checkout your repo
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2) Setup .NET 9 (SDK)
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '9.0.x'   
 
-      # 3) Restore NuGet packages
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore TaskTracker.Api/TaskTracker.Api.csproj
 
-      # 4) Build (Release)
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build TaskTracker.Api/TaskTracker.Api.csproj -c Release --no-restore
 
-      # 5) Run tests (unit + integration)
-      # Your integration tests use WebApplicationFactory + InMemory EF, so no secrets needed.
       - name: Test
-        run: dotnet test --configuration Release --no-build --collect "XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test -c Release --no-build
 
-      # 6) Upload test results (nice to have)
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Publish
+        run: dotnet publish TaskTracker.Api/TaskTracker.Api.csproj -c Release -o ./publish --no-build
+
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v2
         with:
-          name: dotnet-test-results
-          path: |
-            **/TestResults/*.trx
-            **/TestResults/**/coverage.cobertura.xml
+          app-name: "TaskTracker-BootCamp"   # must match your Web App name exactly
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
