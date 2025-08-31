@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskTracker.Api", "TaskTrac
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{E03E6719-B9A9-45D0-87CB-64757581CFA1}"
 	ProjectSection(SolutionItems) = preProject
-		deploy.yml = deploy.yml
+		.github\workflows\deploy.yml = .github\workflows\deploy.yml
 		.github\workflows\dotnet-ci.yml = .github\workflows\dotnet-ci.yml
 		.github\PULL_REQUEST_TEMPLATE.md = .github\PULL_REQUEST_TEMPLATE.md
 		README.md = README.md
