@@ -64,28 +64,54 @@ var app = builder.Build();
 
 // ===== Seeding =====
 // Keep your dev seeding, and also seed a tiny demo set if we're on InMemory (only if not Testing)
+// ===== Seeding & Migrations =====
+// ===== Seeding & Migrations =====
+// ===== Seeding & Migrations (minimal, safe) =====
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    if (app.Environment.IsDevelopment())
+    if (!db.Database.IsInMemory())
     {
-        // Your existing dev seeding (idempotent)
-        await DbSeeder.SeedAsync(db);
-    }
+        db.Database.Migrate();
 
-    // If running on the in-memory provider, add a couple of demo tasks if empty
-    if (db.Database.IsInMemory())
-    {
-        if (!db.Tasks.Any())
+        if (app.Environment.IsDevelopment() && !db.Projects.Any())
         {
-            db.Tasks.Add(new TaskItem { Title = "Hello from InMemory" });
-            db.Tasks.Add(new TaskItem { Title = "Azure App Service demo" });
+            var p1 = new Project { Name = "Website Revamp" };
+            var p2 = new Project { Name = "Mobile App" };
+            db.Projects.AddRange(p1, p2);
+            await db.SaveChangesAsync();
+
+            db.Tasks.AddRange(
+                new TaskItem { Title = "Seeded (SQL) — Task 1", ProjectId = p1.Id },
+                new TaskItem { Title = "Seeded (SQL) — Task 2", ProjectId = p2.Id }
+            );
             await db.SaveChangesAsync();
         }
     }
+    else
+    {
+        if (!db.Projects.Any())
+        {
+            var p = new Project { Name = "InMemory Project" };
+            db.Projects.Add(p);
+            await db.SaveChangesAsync();
+
+            if (!db.Tasks.Any())
+            {
+                db.Tasks.AddRange(
+                    new TaskItem { Title = "Hello from InMemory", ProjectId = p.Id },
+                    new TaskItem { Title = "Azure App Service demo", ProjectId = p.Id }
+                );
+                await db.SaveChangesAsync();
+            }
+        }
+    }
 }
+
+
+
 
 // ===== Middleware =====
 if (app.Environment.IsDevelopment())

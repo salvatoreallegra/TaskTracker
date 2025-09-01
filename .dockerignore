@@ -1,0 +1,39 @@
+# Ignore .NET build output
+bin/
+obj/
+
+# User secrets & configs
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+logs/
+TestResults/
+
+# VS/IDE artifacts
+.vscode/
+.idea/
+*.swp
+*.lock
+
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile*
+
+# Coverage / test cache
+coverage/
+*.coverage
+*.coveragexml
+
+# Node/NPM (if any React frontend lands here later)
+node_modules/
+
+# Other
+.env

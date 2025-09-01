@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  api:
+    environment:
+      - DOTNET_USE_POLLING_FILE_WATCHER=true
+      - DOTNET_HOST_PATH=/usr/share/dotnet/dotnet
+    volumes:
+      - ./TaskTracker.Api:/src/TaskTracker.Api
+      - ./TaskTracker.Tests:/src/TaskTracker.Tests
