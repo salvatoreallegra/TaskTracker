@@ -1,25 +1,58 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using AutoMapper;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using TaskTracker.Api.Abstractions;
 using TaskTracker.Api.Data;
 using TaskTracker.Api.Middleware;
+using TaskTracker.Api.Models;
 using TaskTracker.Api.Options;
 using TaskTracker.Api.Services;
-using TaskTracker.Api.Models; // for TaskItem
 
 var builder = WebApplication.CreateBuilder(args);
 
-// MVC / Swagger
+// ===== MVC / Swagger =====
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    // Keep your doc visible and add Bearer support so Swagger shows the Authorize button
+    c.SwaggerDoc("v1", new() { Title = "TaskTracker API", Version = "v1" });
 
-// DI
+    // Bearer JWT security scheme
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// ===== DI =====
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
-// CORS: dev client origins
+// ===== CORS: dev client origins =====
 const string DevClientCors = "DevClientCors";
 builder.Services.AddCors(options =>
 {
@@ -31,11 +64,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Options
+// ===== Options =====
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
 // ===== DbContext registration with safe fallback =====
-// Tests: keep your Testing environment free to override in CustomWebApplicationFactory.
+// Tests: keep Testing environment free to override in CustomWebApplicationFactory.
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     var connStr = builder.Configuration.GetConnectionString("Default");
@@ -53,19 +86,38 @@ if (!builder.Environment.IsEnvironment("Testing"))
         }
     });
 }
-else
-{
-    // In tests we intentionally don't register a provider here;
-    // CustomWebApplicationFactory should replace/override the DbContext as needed.
-}
 
-// Build app
+// ===== JWT Auth setup (must be BEFORE Build) =====
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtIssuer = jwtSection["Issuer"];
+var jwtAudience = jwtSection["Audience"];
+var jwtKey = jwtSection["Key"]; // dev secret; move to App Service / Key Vault in prod
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.SaveToken = true;
+        options.TokenValidationParameters = new()
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey ?? string.Empty))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
-// ===== Seeding =====
-// Keep your dev seeding, and also seed a tiny demo set if we're on InMemory (only if not Testing)
-// ===== Seeding & Migrations =====
-// ===== Seeding & Migrations =====
 // ===== Seeding & Migrations (minimal, safe) =====
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -74,8 +126,10 @@ if (!app.Environment.IsEnvironment("Testing"))
 
     if (!db.Database.IsInMemory())
     {
-        db.Database.Migrate();
+        // Apply EF Core migrations automatically in dev/compose/cloud
+        //db.Database.Migrate();
 
+        // Dev-only seed if empty
         if (app.Environment.IsDevelopment() && !db.Projects.Any())
         {
             var p1 = new Project { Name = "Website Revamp" };
@@ -92,6 +146,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
     else
     {
+        // InMemory fallback: tiny demo seed
         if (!db.Projects.Any())
         {
             var p = new Project { Name = "InMemory Project" };
@@ -110,9 +165,6 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-
-
-
 // ===== Middleware =====
 if (app.Environment.IsDevelopment())
 {
@@ -124,6 +176,8 @@ app.UseCors(DevClientCors);
 
 app.UseGlobalExceptionHandling();
 
+// IMPORTANT: Authentication must come BEFORE Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

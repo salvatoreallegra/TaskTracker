@@ -1,0 +1,14 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace TaskTracker.Api.Models;
+
+public class User
+{
+    public int Id { get; set; }
+
+    [Required, MaxLength(64)]
+    public string UserName { get; set; } = string.Empty;
+
+    [Required]
+    public string PasswordHash { get; set; } = string.Empty;
+}
