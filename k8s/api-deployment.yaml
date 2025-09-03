@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tasktracker-api
+  namespace: tasktracker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tasktracker-api
+  template:
+    metadata:
+      labels:
+        app: tasktracker-api
+    spec:
+      containers:
+      - name: api
+        image: salbootcampacr.azurecr.io/tasktracker-api:latest   # <-- change this!
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        - name: ConnectionStrings__Default
+          value: "Server=tasktracker-db;Database=TaskTrackerDb;User Id=sa;Password=Your_password123;TrustServerCertificate=True"
+        readinessProbe:
+          httpGet: { path: /health, port: 8080 }
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet: { path: /health, port: 8080 }
+          initialDelaySeconds: 30
+          periodSeconds: 10

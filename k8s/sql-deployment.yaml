@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tasktracker-db
+  namespace: tasktracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tasktracker-db
+  template:
+    metadata:
+      labels:
+        app: tasktracker-db
+    spec:
+      containers:
+      - name: sql
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          value: "Your_password123"   # dev only; change later
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tasktracker-db
+  namespace: tasktracker
+spec:
+  ports:
+  - port: 1433
+  selector:
+    app: tasktracker-db

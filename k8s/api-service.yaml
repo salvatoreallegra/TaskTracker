@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tasktracker-api
+  namespace: tasktracker
+spec:
+  selector:
+    app: tasktracker-api
+  ports:
+    - protocol: TCP
+      port: 80         # exposed port
+      targetPort: 8080 # the port your container listens on
+  type: LoadBalancer   # gives you an external IP on Azure
