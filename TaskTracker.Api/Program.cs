@@ -127,7 +127,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     if (!db.Database.IsInMemory())
     {
         // Apply EF Core migrations automatically in dev/compose/cloud
-        //db.Database.Migrate();
+        db.Database.Migrate();
 
         // Dev-only seed if empty
         if (app.Environment.IsDevelopment() && !db.Projects.Any())

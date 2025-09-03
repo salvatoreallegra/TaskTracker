@@ -10,9 +10,10 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__Default=Server=db;Database=TaskTrackerDb;User Id=sa;Password=Your_password123;TrustServerCertificate=True
+      - ConnectionStrings__Default=Server=db,1433;Database=TaskTrackerDb;User Id=sa;Password=Your_password123;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -24,6 +25,12 @@ services:
       - "1433:1433"
     volumes:
       - sql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "pidof sqlservr"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
 volumes:
   sql_data:
