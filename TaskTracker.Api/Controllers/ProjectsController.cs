@@ -9,9 +9,10 @@ using AutoMapper;
 using TaskTracker.Api.Data;
 using TaskTracker.Api.Dtos;
 using TaskTracker.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TaskTracker.Api.Controllers;
-
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ProjectsController : ControllerBase
