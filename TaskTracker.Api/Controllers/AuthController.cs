@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -24,6 +25,29 @@ public class AuthController : ControllerBase
 
     public record RegisterRequest(string UserName, string Password);
     public record LoginRequest(string UserName, string Password);
+
+    public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
+    {
+        public RegisterRequestValidator()
+        {
+            RuleFor(x => x.UserName)
+                .NotEmpty().WithMessage("Username is required")
+                .MinimumLength(3).WithMessage("Username must be at least 3 characters");
+
+            RuleFor(x => x.Password)
+                .NotEmpty().WithMessage("Password is required")
+                .MinimumLength(8).WithMessage("Password must be at least 8 characters");
+        }
+    }
+
+    public class LoginRequestValidator : AbstractValidator<LoginRequest>
+    {
+        public LoginRequestValidator()
+        {
+            RuleFor(x => x.UserName).NotEmpty().WithMessage("Username is required");
+            RuleFor(x => x.Password).NotEmpty().WithMessage("Password is required");
+        }
+    }
 
     [HttpPost("register")]
     [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
