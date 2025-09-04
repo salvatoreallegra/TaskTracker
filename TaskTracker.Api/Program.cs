@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ===== MVC / Swagger =====
 builder.Services.AddControllers();
+builder.Services.AddApplicationInsightsTelemetry();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
 

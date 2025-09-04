@@ -39,6 +39,11 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<TaskReadDto>> Create([FromBody] TaskCreateDto body, CancellationToken ct = default)
     {
         var created = await _service.CreateAsync(body, ct);
+        _logger.LogInformation(
+        "Task created with Title: {Title}, TraceId: {TraceId}",
+        body.Title,
+        HttpContext.TraceIdentifier
+    );
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
