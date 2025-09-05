@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -22,6 +23,17 @@ public class AuthController : ControllerBase
         _db = db;
         _config = config;
     }
+    private RefreshToken GenerateRefreshToken(User user)
+    {
+        return new RefreshToken
+        {
+            Token = Guid.NewGuid().ToString(), // simple random ID
+            ExpiresUtc = DateTime.UtcNow.AddDays(7), // 7-day lifetime
+            IsRevoked = false,
+            UserId = user.Id
+        };
+    }
+
 
     public record RegisterRequest(string UserName, string Password);
     public record LoginRequest(string UserName, string Password);
@@ -77,9 +89,50 @@ public class AuthController : ControllerBase
 
         var valid = BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash);
         if (!valid) return Unauthorized("Invalid credentials.");
+        // Create access token (you already have this)
+        var accessToken = GenerateJwt(user);
 
-        var token = GenerateJwt(user);
-        return Ok(new { token });
+        // Create refresh token
+        var refreshToken = GenerateRefreshToken(user);
+        _db.RefreshTokens.Add(refreshToken);
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken.Token
+        });
+                       
+    }
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] string refreshToken)
+    {
+        var stored = await _db.RefreshTokens
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+
+        if (stored is null || stored.IsRevoked || stored.ExpiresUtc < DateTime.UtcNow)
+            return Unauthorized("Invalid refresh token.");
+
+        // Issue new access token
+        var newAccessToken = GenerateJwt(stored.User);
+
+        return Ok(new
+        {
+            AccessToken = newAccessToken
+        });
+    }
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] string refreshToken)
+    {
+        var stored = await _db.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+        if (stored is null) return NotFound();
+
+        stored.IsRevoked = true;
+        await _db.SaveChangesAsync();
+
+        return NoContent();
     }
 
     private string GenerateJwt(User user)
