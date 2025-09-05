@@ -54,7 +54,7 @@ public class TasksController : ControllerBase
         if (!ok) return BadRequest(new { message = "Invalid id or task not found." });
         return NoContent();
     }
-
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {

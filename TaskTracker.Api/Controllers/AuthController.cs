@@ -61,7 +61,7 @@ public class AuthController : ControllerBase
             return Conflict("Username already exists.");
 
         var hash = BCrypt.Net.BCrypt.HashPassword(req.Password);
-        var user = new User { UserName = req.UserName, PasswordHash = hash };
+        var user = new User { UserName = req.UserName, PasswordHash = hash, Role = "User" };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
@@ -93,6 +93,7 @@ public class AuthController : ControllerBase
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+            new Claim(ClaimTypes.Role, user.Role)
             // Add roles/permissions later if needed
         };
 

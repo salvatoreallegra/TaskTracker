@@ -131,13 +131,22 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     if (!db.Database.IsInMemory())
     {
-        // Apply EF Core migrations automatically in dev/compose/cloud
-        //db.Database.Migrate();
+        try
+        {
+            db.Database.Migrate();
+            logger.LogInformation("EF Core migrations applied successfully.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "EF Core migration failed on startup.");
+            throw; // optional: crash fast so you notice the failure
+        }
 
-        // Dev-only seed if empty
+        // (optional) Dev-only seed
         if (app.Environment.IsDevelopment() && !db.Projects.Any())
         {
             var p1 = new Project { Name = "Website Revamp" };
@@ -154,7 +163,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
     else
     {
-        // InMemory fallback: tiny demo seed
+        // InMemory fallback seed (kept as-is)
         if (!db.Projects.Any())
         {
             var p = new Project { Name = "InMemory Project" };
@@ -172,6 +181,7 @@ if (!app.Environment.IsEnvironment("Testing"))
         }
     }
 }
+
 
 // ===== Middleware =====
 if (app.Environment.IsDevelopment())
