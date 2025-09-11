@@ -17,6 +17,28 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ===== MVC / Swagger =====
 builder.Services.AddControllers();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = ctx =>
+    {
+        var problem = new ValidationProblemDetails(ctx.ModelState)
+        {
+            Title = "Validation failed.",
+            Status = StatusCodes.Status400BadRequest,
+            Type = "https://datatracker.ietf.org/doc/html/rfc7807",
+            Instance = ctx.HttpContext.Request.Path
+        };
+        // Optional: include a trace id like your exception middleware
+        problem.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier;
+
+        return new BadRequestObjectResult(problem)
+        {
+            ContentTypes = { "application/problem+json" }
+        };
+    };
+});
+
+
 builder.Services.AddApplicationInsightsTelemetry();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
