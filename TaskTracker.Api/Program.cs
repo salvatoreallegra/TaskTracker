@@ -206,11 +206,25 @@ if (!app.Environment.IsEnvironment("Testing"))
 
 
 // ===== Middleware =====
-if (app.Environment.IsDevelopment())
+var enableSwagger = app.Configuration.GetValue<bool>("Swagger:Enabled", false);
+if (enableSwagger || app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskTracker API v1");
+        c.RoutePrefix = "swagger"; // available at /swagger
+    });
 }
+
+app.UseCors(DevClientCors);
+app.UseGlobalExceptionHandling();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+
+await app.RunAsync();
+
 
 app.UseCors(DevClientCors);
 
