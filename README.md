@@ -138,17 +138,8 @@ This project already integrates a robust set of modern development practices and
 - 🧠 **CQRS Pattern**  
   - Clear separation between Commands (writes) and Queries (reads).
 
-- 🤝 **Contract Testing with Pact**  
-  - Ensures API compatibility between microservices through contract testing.
 
-- 📈 **Load Testing in CI/CD**  
-  - k6 integrated into the CI pipeline to simulate real-world load and performance bottlenecks.
 
-- 📊 **Observability & Monitoring**  
-  - OpenTelemetry instrumentation with pre-built Grafana dashboards.
 
-- ☁️ **Full Azure Deployment Pipelines**  
-  - CI/CD workflows deploy to Azure App Service and Azure Kubernetes Service (AKS).
 
-- 🛠 **Infrastructure as Code (IaC)**  
-  - Uses **Terraform** and **Bicep** for repeatable, automated cloud resource provisioning.
+- 
