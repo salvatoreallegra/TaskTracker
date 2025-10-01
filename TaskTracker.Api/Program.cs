@@ -101,7 +101,7 @@ builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 // Tests: keep Testing environment free to override in CustomWebApplicationFactory.
 if (!builder.Environment.IsEnvironment("Testing"))
 {
-    var connStr = builder.Configuration.GetConnectionString("TaskTrackerDb");
+    var connStr = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
 
     builder.Services.AddDbContext<AppDbContext>(options =>
     {
