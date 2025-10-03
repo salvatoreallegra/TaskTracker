@@ -22,19 +22,19 @@ public class TaskApiTests : IClassFixture<CustomWebApplicationFactory<Program>>
         _client = factory.CreateClient();
     }
 
-   /* [Fact]
+    [Fact]
     public async Task GetAll_ReturnsSeedTask()
     {
-        var response = await _client.GetAsync("/api/tasks?page=1&pageSize=10");
+        var response = await _client.GetAsync("/api/tasks?page=1&pageSize=3");
 
         var tasks = await response.Content.ReadFromJsonAsync<List<TaskReadDto>>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(tasks);
         Assert.Contains(tasks, t => t.Title == "Seed task");
-    }*/
+    }
 
-   /* [Fact]
+    [Fact]
     public async Task Post_CreatesTask()
     {
         var createDto = new TaskCreateDto
@@ -49,5 +49,5 @@ public class TaskApiTests : IClassFixture<CustomWebApplicationFactory<Program>>
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(created);
         Assert.Equal("Integration created", created!.Title);
-    }*/
+    }
 }

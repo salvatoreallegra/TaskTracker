@@ -219,8 +219,12 @@ if (enableSwagger || app.Environment.IsDevelopment())
 
 app.UseCors(DevClientCors);
 app.UseGlobalExceptionHandling();
-app.UseAuthentication();
-app.UseAuthorization();
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
 app.MapControllers();
 
 await app.RunAsync();
